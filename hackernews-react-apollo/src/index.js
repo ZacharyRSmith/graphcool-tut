@@ -1,3 +1,5 @@
+import { GC_AUTH_TOKEN } from './constants'
+import { ApolloLink } from 'apollo-client-preset'
 import { BrowserRouter } from 'react-router-dom'
 import React from 'react'
 import ReactDOM from 'react-dom'
@@ -13,9 +15,22 @@ import { InMemoryCache } from 'apollo-cache-inmemory'
 // 2
 const httpLink = new HttpLink({ uri: 'https://api.graph.cool/simple/v1/cjc5glkcx0zv40129pb30xtd9' })
 
+const middlewareAuthLink = new ApolloLink((operation, forward) => {
+  const token = localStorage.getItem(GC_AUTH_TOKEN)
+  const authorizationHeader = token ? `Bearer ${token}` : null
+  operation.setContext({
+    headers: {
+      authorization: authorizationHeader
+    }
+  })
+  return forward(operation)
+})
+
+const httpLinkWithAuthToken = middlewareAuthLink.concat(httpLink)
+
 // 3
 const client = new ApolloClient({
-  link: httpLink,
+  link: httpLinkWithAuthToken,
   cache: new InMemoryCache()
 })
 
