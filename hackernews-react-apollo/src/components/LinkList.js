@@ -6,6 +6,7 @@ import Link from './Link'
 class LinkList extends Component {
   componentDidMount() {
     this._subscribeToNewLinks()
+    this._subscribeToNewVotes()
   }
 
   render() {
@@ -70,11 +71,56 @@ class LinkList extends Component {
         }
       `,
       updateQuery: (previous, { subscriptionData: { data: subscriptionData } }) => {
-        console.log('subscriptionData', subscriptionData);
         const newAllLinks = [
           subscriptionData.Link.node,
           ...previous.allLinks
         ]
+        const result = {
+          ...previous,
+          allLinks: newAllLinks
+        }
+        return result
+      }
+    })
+  }
+
+  _subscribeToNewVotes = () => {
+    this.props.allLinksQuery.subscribeToMore({
+      document: gql`
+        subscription {
+          Vote(filter: {
+            mutation_in: [CREATED]
+          }) {
+            node {
+              id
+              link {
+                id
+                url
+                description
+                createdAt
+                postedBy {
+                  id
+                  name
+                }
+                votes {
+                  id
+                  user {
+                    id
+                  }
+                }
+              }
+              user {
+                id
+              }
+            }
+          }
+        }
+      `,
+      updateQuery: (previous, { subscriptionData: { data: subscriptionData } }) => {
+        const votedLinkIndex = previous.allLinks.findIndex(link => link.id === subscriptionData.Vote.node.link.id)
+        const link = subscriptionData.Vote.node.link
+        const newAllLinks = previous.allLinks.slice()
+        newAllLinks[votedLinkIndex] = link
         const result = {
           ...previous,
           allLinks: newAllLinks
