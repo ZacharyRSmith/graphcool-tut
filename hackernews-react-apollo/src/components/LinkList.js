@@ -4,6 +4,9 @@ import React, { Component } from 'react'
 import Link from './Link'
 
 class LinkList extends Component {
+  componentDidMount() {
+    this._subscribeToNewLinks()
+  }
 
   render() {
     // 1
@@ -40,6 +43,46 @@ class LinkList extends Component {
     store.writeQuery({ query: ALL_LINKS_QUERY, data })
   }
 
+  _subscribeToNewLinks = () => {
+    this.props.allLinksQuery.subscribeToMore({
+      document: gql`
+        subscription {
+          Link(filter: {
+            mutation_in: [CREATED]
+          }) {
+            node {
+              id
+              url
+              description
+              createdAt
+              postedBy {
+                id
+                name
+              }
+              votes {
+                id
+                user {
+                  id
+                }
+              }
+            }
+          }
+        }
+      `,
+      updateQuery: (previous, { subscriptionData: { data: subscriptionData } }) => {
+        console.log('subscriptionData', subscriptionData);
+        const newAllLinks = [
+          subscriptionData.Link.node,
+          ...previous.allLinks
+        ]
+        const result = {
+          ...previous,
+          allLinks: newAllLinks
+        }
+        return result
+      }
+    })
+  }
 }
 
 export const ALL_LINKS_QUERY = gql`
